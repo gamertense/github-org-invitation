@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"my-app/internal/model"
 	"net/http"
 	"os"
@@ -53,8 +54,8 @@ func SendInvitation(orgName, teamName string) error {
 			Email:   email,
 		}
 		// print the invitation
-		fmt.Println("Sending invitations to:")
-		fmt.Println(invitation)
+		log.Println("Sending invitations to:")
+		log.Println(invitation)
 
 		jsonData, _ := json.Marshal(invitation)
 
@@ -69,8 +70,9 @@ func SendInvitation(orgName, teamName string) error {
 		if err != nil {
 			return err
 		}
-
 		defer resp.Body.Close()
+
+		printResponse(resp)
 
 		if resp.StatusCode != 201 {
 			return fmt.Errorf("error sending invitation: %s", resp.Status)
@@ -78,6 +80,19 @@ func SendInvitation(orgName, teamName string) error {
 	}
 
 	return nil
+}
+
+func printResponse(resp *http.Response) {
+	bodyBytes, err := io.ReadAll(resp.Body)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	defer resp.Body.Close()
+
+	bodyString := string(bodyBytes)
+	log.Println("response body:")
+	log.Println(bodyString)
 }
 
 func extractEmailsFromCSV(filePath string) ([]string, error) {
