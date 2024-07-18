@@ -72,11 +72,11 @@ func SendInvitation(orgName, teamName string) error {
 		}
 		defer resp.Body.Close()
 
+		// If the user has been added to the orgnization, the status code won't be 201. Comment this out to continue the process.
 		if resp.StatusCode != 201 {
 			return fmt.Errorf("error sending invitation: %s", resp.Status)
 		}
 
-		// Get GitHub username from response body.
 		bodyBytes, err := getRespBodyBytes(resp)
 		if err != nil {
 			return err
