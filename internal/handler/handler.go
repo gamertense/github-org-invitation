@@ -25,3 +25,16 @@ func SendInvitation(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"message": "Invitation sent successfully"})
 }
+
+// FetchUsernameByEmail is an HTTP handler for fetching a username by email
+func FetchUsernameByEmail(c *gin.Context) {
+	email := c.Query("email")
+
+	user, err := service.FetchUsernameByEmail(email)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, user)
+}

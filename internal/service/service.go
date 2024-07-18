@@ -72,27 +72,51 @@ func SendInvitation(orgName, teamName string) error {
 		}
 		defer resp.Body.Close()
 
-		printResponse(resp)
-
 		if resp.StatusCode != 201 {
 			return fmt.Errorf("error sending invitation: %s", resp.Status)
+		}
+
+		// Get GitHub username from response body.
+		bodyBytes, err := getRespBodyBytes(resp)
+		if err != nil {
+			return err
+		}
+
+		// Get GitHub username from response body.
+		var result struct {
+			Login string `json:"login"`
+		}
+		if err := json.Unmarshal(bodyBytes, &result); err != nil {
+			return err
+		}
+		file, err := os.OpenFile("./data/usernames.txt", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		if err != nil {
+			return err
+		}
+		defer file.Close()
+
+		// Save username to a file in this format: email,username\n
+		if _, err := file.WriteString(fmt.Sprintf("%s,%s\n", email, result.Login)); err != nil {
+			return err
 		}
 	}
 
 	return nil
 }
 
-func printResponse(resp *http.Response) {
+// Get body bytes from the response and print it
+func getRespBodyBytes(resp *http.Response) ([]byte, error) {
 	bodyBytes, err := io.ReadAll(resp.Body)
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 
 	defer resp.Body.Close()
 
-	bodyString := string(bodyBytes)
 	log.Println("response body:")
-	log.Println(bodyString)
+	log.Println(string(bodyBytes))
+
+	return bodyBytes, nil
 }
 
 func extractEmailsFromCSV(filePath string) ([]string, error) {
@@ -124,4 +148,48 @@ func extractEmailsFromCSV(filePath string) ([]string, error) {
 	emails = emails[1:]
 
 	return emails, nil
+}
+
+// FetchUsernameByEmail fetches a GitHub username by email
+func FetchUsernameByEmail(email string) (string, error) {
+	githubToken := os.Getenv("GITHUB_TOKEN")
+	githubApiUrl := os.Getenv("GITHUB_API_URL")
+
+	searchURL := fmt.Sprintf("%s/search/users?q=%s", githubApiUrl, email)
+
+	req, err := http.NewRequest("GET", searchURL, nil)
+	if err != nil {
+		return "", err
+	}
+
+	req.Header.Add("Authorization", "Bearer "+githubToken)
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", err
+	}
+
+	// Assuming a simplified version of parsing the response
+	// You'll need to define a struct that matches the GitHub API response format for user search
+	var result struct {
+		Items []struct {
+			Login string `json:"login"`
+		} `json:"items"`
+	}
+	if err := json.Unmarshal(body, &result); err != nil {
+		return "", err
+	}
+
+	if len(result.Items) == 0 {
+		return "", fmt.Errorf("no GitHub user found with email %s", email)
+	}
+
+	// Returning the first matched username
+	return result.Items[0].Login, nil
 }

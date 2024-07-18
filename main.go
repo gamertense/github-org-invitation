@@ -19,5 +19,8 @@ func main() {
 
 	router.POST("/send-invitation", handler.SendInvitation)
 
+	// Add a new route to handle GET requests to /users?email=<email>
+	router.GET("/users", handler.FetchUsernameByEmail)
+
 	router.Run(":8080") // Listen and serve on 0.0.0.0:8080
 }
